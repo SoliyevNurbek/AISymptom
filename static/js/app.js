@@ -1,5 +1,12 @@
 // Custom JavaScript for AI Symptom Checker Demo
 document.addEventListener('DOMContentLoaded', function() {
+    const i18n = window.APP_I18N || {
+        requiredAlert: 'Please fill in all required fields.',
+        analyzeBtn: 'Analyze symptoms',
+        loadingBtn: 'Analyzing...',
+        retryBtn: 'Try again',
+        timeoutAlert: 'The response took longer than expected. Please try again.'
+    };
     // Symptom chip selection
     const symptomChips = document.querySelectorAll('.symptom-chip');
     const symptomTextarea = document.getElementById('symptoms');
@@ -39,10 +46,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!isValid) {
                 e.preventDefault();
-                alert('Iltimos, barcha majburiy maydonlarni to\'ldiring.');
+                alert(i18n.requiredAlert);
                 const submitButton = form.querySelector('button[type="submit"]');
                 if (submitButton) {
-                    submitButton.innerHTML = '<i class="fas fa-brain"></i> Alomatlarni tahlil qilish';
+                    submitButton.innerHTML = `<i class="fas fa-brain"></i> ${i18n.analyzeBtn}`;
                     submitButton.disabled = false;
                 }
                 return;
@@ -50,15 +57,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const submitButton = form.querySelector('button[type="submit"]');
             if (submitButton) {
-                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Tahlil qilinmoqda...';
+                submitButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${i18n.loadingBtn}`;
                 submitButton.disabled = true;
 
                 // Agar sahifa o'zgarmasa, foydalanuvchini osilib qolgan holatda qoldirmaymiz.
                 window.setTimeout(() => {
                     if (document.body.contains(submitButton) && submitButton.disabled) {
-                        submitButton.innerHTML = '<i class="fas fa-rotate-right"></i> Qayta urinib ko\'rish';
+                        submitButton.innerHTML = `<i class="fas fa-rotate-right"></i> ${i18n.retryBtn}`;
                         submitButton.disabled = false;
-                        alert('Javob kutilganidan uzoq davom etdi. Server yoki API sekin ishlayapti, qayta urinib ko\'ring.');
+                        alert(i18n.timeoutAlert);
                     }
                 }, 12000);
             }

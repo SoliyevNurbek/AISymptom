@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Bosh sahifa - AI Alomat Tekshiruvi Demo{% endblock %}
+{% block title %}{{ ui.home_title }} - {{ ui.brand }}{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
@@ -8,29 +8,27 @@
     <div class="container">
         <div class="row align-items-center">
             <div class="col-lg-6 hero-content">
-                <h1 class="mb-4">AI Alomat Tekshiruvi Demo</h1>
-                <p class="lead mb-4 text-muted">
-                    Alomatlaringiz uchun AI yordamida yo'l-yo'riq oling. Bu faqat umumiy xabardorlik uchun ta'limiy vosita.
-                </p>
+                <h1 class="mb-4">{{ ui.brand }}</h1>
+                <p class="lead mb-4 text-muted">{{ ui.hero_text }}</p>
                 <div class="mb-4">
-                    <span class="trust-badge"><i class="fas fa-shield-alt"></i> Tibbiy tashxis emas</span>
-                    <span class="trust-badge"><i class="fas fa-brain"></i> AI yordamida</span>
-                    <span class="trust-badge"><i class="fas fa-exclamation-triangle"></i> Favqulodda ogohlantirishlar</span>
-                    <span class="trust-badge"><i class="fas fa-clock"></i> Tez alomat tekshiruvi</span>
+                    <span class="trust-badge"><i class="fas fa-shield-alt"></i> {{ ui.not_diagnosis }}</span>
+                    <span class="trust-badge"><i class="fas fa-brain"></i> {{ ui.ai_powered }}</span>
+                    <span class="trust-badge"><i class="fas fa-exclamation-triangle"></i> {{ ui.emergency_alerts }}</span>
+                    <span class="trust-badge"><i class="fas fa-clock"></i> {{ ui.quick_check }}</span>
                 </div>
                 <div class="mb-4">
                     <p class="text-danger fw-bold">
                         <i class="fas fa-info-circle"></i>
-                        Bu tibbiy tashxis emas. Bu faqat umumiy AI tavsiyasi.<br>
-                        <small class="text-muted">This is not a medical diagnosis. It is general AI-assisted guidance only.</small>
+                        {{ ui.not_diagnosis }}.<br>
+                        <small class="text-muted">{{ ui.hero_text }}</small>
                     </p>
                 </div>
                 <div class="d-flex gap-3 flex-wrap">
-                    <a href="{{ url_for('app_page') }}" class="btn btn-primary btn-lg">
-                        <i class="fas fa-play"></i> Tekshiruvni boshlash
+                    <a href="{{ url_for('app_page', lang=lang) }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play"></i> {{ ui.start_check }}
                     </a>
                     <a href="#how-it-works" class="btn btn-outline-primary btn-lg">
-                        AI ishlashi
+                        {{ ui.how_it_works }}
                     </a>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Alomat tahlili - AI Alomat Tekshiruvi Demo{% endblock %}
+{% block title %}{{ ui.app_title }} - {{ ui.brand }}{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -8,57 +8,49 @@
         <div class="col-lg-8">
             <!-- Header -->
             <div class="text-center mb-5">
-                <h1>Alomat tahlili</h1>
-                <p class="lead text-muted">Alomatlaringiz uchun AI yordamida yo'l-yo'riq olish uchun kiriting</p>
+                <h1>{{ ui.app_title }}</h1>
+                <p class="lead text-muted">{{ ui.hero_text }}</p>
             </div>
 
             <!-- Form Card -->
             <div class="card shadow">
                 <div class="card-body">
                     <form action="{{ url_for('analyze') }}" method="POST">
+                        <input type="hidden" name="lang" value="{{ lang }}">
                         <!-- Symptoms Input -->
                         <div class="mb-4">
                             <label for="symptoms" class="form-label fw-bold">
-                                <i class="fas fa-edit text-primary"></i> Alomatlaringizni tasvirlang
+                                <i class="fas fa-edit text-primary"></i> {{ ui.symptoms_label }}
                             </label>
                             <textarea
                                 class="form-control"
                                 id="symptoms"
                                 name="symptoms"
                                 rows="4"
-                                placeholder="masalan, bosh og'rig'i, isitma, charchoq, yo'tal..."
+                                placeholder="{{ ui.symptoms_placeholder }}"
                                 required
                             ></textarea>
                             <div class="form-text">
-                                Iloji boricha aniqroq bo'ling. Og'irlik, joylashuv va boshqa tegishli tafsilotlarni qo'shing.
+                                {{ ui.symptoms_help }}
                             </div>
                         </div>
 
                         <!-- Symptom Chips -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">
-                                <i class="fas fa-tags text-primary"></i> Umumiy alomatlar (Qo'shish uchun bosing)
+                                <i class="fas fa-tags text-primary"></i> {{ ui.common_symptoms }} {{ ui.chip_hint }}
                             </label>
                             <div class="d-flex flex-wrap">
-                                <span class="symptom-chip">bosh og'rig'i</span>
-                                <span class="symptom-chip">isitma</span>
-                                <span class="symptom-chip">charchoq</span>
-                                <span class="symptom-chip">ko'krak og'rig'i</span>
-                                <span class="symptom-chip">nafas qisilishi</span>
-                                <span class="symptom-chip">ko'ngil aynishi</span>
-                                <span class="symptom-chip">bosh aylanishi</span>
-                                <span class="symptom-chip">yo'tal</span>
-                                <span class="symptom-chip">tomog' og'rig'i</span>
-                                <span class="symptom-chip">qorin og'rig'i</span>
-                                <span class="symptom-chip">bo'g'im og'rig'i</span>
-                                <span class="symptom-chip">toshma</span>
+                                {% for chip in ui.symptom_chips %}
+                                <span class="symptom-chip">{{ chip }}</span>
+                                {% endfor %}
                             </div>
                         </div>
 
                         <!-- Age Input -->
                         <div class="mb-4">
                             <label for="age" class="form-label fw-bold">
-                                <i class="fas fa-birthday-cake text-primary"></i> Yosh
+                                <i class="fas fa-birthday-cake text-primary"></i> {{ ui.age }}
                             </label>
                             <div class="row align-items-center">
                                 <div class="col-9">
@@ -74,7 +66,7 @@
                                     >
                                 </div>
                                 <div class="col-3">
-                                    <span id="age-value" class="fw-bold">30</span> yosh
+                                    <span id="age-value" class="fw-bold">30</span> {{ ui.years }}
                                 </div>
                             </div>
                         </div>
@@ -82,25 +74,19 @@
                         <!-- Gender Input -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">
-                                <i class="fas fa-venus-mars text-primary"></i> Jins (Ixtiyoriy)
+                                <i class="fas fa-venus-mars text-primary"></i> {{ ui.gender }}
                             </label>
                             <div class="row">
-                                <div class="col-md-4 mb-2">
-                                    <input type="radio" class="btn-check" id="male" name="gender" value="erkak" autocomplete="off">
+                                <div class="col-md-6 mb-2">
+                                    <input type="radio" class="btn-check" id="male" name="gender" value="male" autocomplete="off" checked>
                                     <label class="btn btn-outline-primary w-100" for="male">
-                                        <i class="fas fa-mars"></i> Erkak
+                                        <i class="fas fa-mars"></i> {{ gender_labels.male }}
                                     </label>
                                 </div>
-                                <div class="col-md-4 mb-2">
-                                    <input type="radio" class="btn-check" id="female" name="gender" value="ayol" autocomplete="off">
+                                <div class="col-md-6 mb-2">
+                                    <input type="radio" class="btn-check" id="female" name="gender" value="female" autocomplete="off">
                                     <label class="btn btn-outline-primary w-100" for="female">
-                                        <i class="fas fa-venus"></i> Ayol
-                                    </label>
-                                </div>
-                                <div class="col-md-4 mb-2">
-                                    <input type="radio" class="btn-check" id="other" name="gender" value="boshqa" autocomplete="off" checked>
-                                    <label class="btn btn-outline-primary w-100" for="other">
-                                        <i class="fas fa-genderless"></i> Boshqa
+                                        <i class="fas fa-venus"></i> {{ gender_labels.female }}
                                     </label>
                                 </div>
                             </div>
@@ -109,23 +95,23 @@
                         <!-- Duration Input -->
                         <div class="mb-4">
                             <label for="duration" class="form-label fw-bold">
-                                <i class="fas fa-clock text-primary"></i> Alomatlaringiz qancha vaqtdan beri davom etmoqda?
+                                <i class="fas fa-clock text-primary"></i> {{ ui.duration_question }}
                             </label>
                             <select class="form-select" id="duration" name="duration" required>
-                                <option value="">Davomiylikni tanlang</option>
-                                <option value="hours">24 soatdan kam</option>
-                                <option value="1-3_days">1-3 kun</option>
-                                <option value="4-7_days">4-7 kun</option>
-                                <option value="1-2_weeks">1-2 hafta</option>
-                                <option value="2-4_weeks">2-4 hafta</option>
-                                <option value="more_than_month">Bir oydan ko'proq</option>
+                                <option value="">{{ ui.choose_duration }}</option>
+                                <option value="hours">{{ duration_labels.hours }}</option>
+                                <option value="1-3_days">{{ duration_labels['1-3_days'] }}</option>
+                                <option value="4-7_days">{{ duration_labels['4-7_days'] }}</option>
+                                <option value="1-2_weeks">{{ duration_labels['1-2_weeks'] }}</option>
+                                <option value="2-4_weeks">{{ duration_labels['2-4_weeks'] }}</option>
+                                <option value="more_than_month">{{ duration_labels.more_than_month }}</option>
                             </select>
                         </div>
 
                         <!-- Submit Button -->
                         <div class="text-center">
                             <button type="submit" class="btn btn-primary btn-lg px-5">
-                                <i class="fas fa-brain"></i> Alomatlarni tahlil qilish
+                                <i class="fas fa-brain"></i> {{ ui.analyze_btn }}
                             </button>
                         </div>
                     </form>
@@ -134,8 +120,8 @@
 
             <!-- Safety Note -->
             <div class="alert alert-info mt-4">
-                <h6><i class="fas fa-shield-alt"></i> Xavfsizlik eslatmasi</h6>
-                <p>Bu tahlil faqat umumiy axborot maqsadlarida. Agar sizda og'ir alomatlar bo'lsa yoki sog'lig'ingiz haqida tashvishlansangiz, darhol tibbiy mutaxassis bilan bog'laning. Favqulodda holatda favqulodda xizmatlarga qo'ng'iroq qiling.</p>
+                <h6><i class="fas fa-shield-alt"></i> {{ ui.safety_note_title }}</h6>
+                <p>{{ ui.safety_note_body }}</p>
             </div>
         </div>
     </div>

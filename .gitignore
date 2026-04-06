@@ -19,14 +19,21 @@ instance/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.cache/
 .coverage
 .coverage.*
 htmlcov/
+*.log
 
 # Local databases
 *.db
 *.sqlite
 *.sqlite3
+
+# Packaging / build artifacts
+build/
+dist/
+*.egg-info/
 
 # OS / editor files
 .DS_Store

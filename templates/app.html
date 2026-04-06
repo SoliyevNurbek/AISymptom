@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Alomat tahlili - AI Alomat Tekshiruvi Demo{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <h1>Alomat tahlili</h1>
+                <p class="lead text-muted">Alomatlaringiz uchun AI yordamida yo'l-yo'riq olish uchun kiriting</p>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card shadow">
+                <div class="card-body">
+                    <form action="{{ url_for('analyze') }}" method="POST">
+                        <!-- Symptoms Input -->
+                        <div class="mb-4">
+                            <label for="symptoms" class="form-label fw-bold">
+                                <i class="fas fa-edit text-primary"></i> Alomatlaringizni tasvirlang
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="symptoms"
+                                name="symptoms"
+                                rows="4"
+                                placeholder="masalan, bosh og'rig'i, isitma, charchoq, yo'tal..."
+                                required
+                            ></textarea>
+                            <div class="form-text">
+                                Iloji boricha aniqroq bo'ling. Og'irlik, joylashuv va boshqa tegishli tafsilotlarni qo'shing.
+                            </div>
+                        </div>
+
+                        <!-- Symptom Chips -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-tags text-primary"></i> Umumiy alomatlar (Qo'shish uchun bosing)
+                            </label>
+                            <div class="d-flex flex-wrap">
+                                <span class="symptom-chip">bosh og'rig'i</span>
+                                <span class="symptom-chip">isitma</span>
+                                <span class="symptom-chip">charchoq</span>
+                                <span class="symptom-chip">ko'krak og'rig'i</span>
+                                <span class="symptom-chip">nafas qisilishi</span>
+                                <span class="symptom-chip">ko'ngil aynishi</span>
+                                <span class="symptom-chip">bosh aylanishi</span>
+                                <span class="symptom-chip">yo'tal</span>
+                                <span class="symptom-chip">tomog' og'rig'i</span>
+                                <span class="symptom-chip">qorin og'rig'i</span>
+                                <span class="symptom-chip">bo'g'im og'rig'i</span>
+                                <span class="symptom-chip">toshma</span>
+                            </div>
+                        </div>
+
+                        <!-- Age Input -->
+                        <div class="mb-4">
+                            <label for="age" class="form-label fw-bold">
+                                <i class="fas fa-birthday-cake text-primary"></i> Yosh
+                            </label>
+                            <div class="row align-items-center">
+                                <div class="col-9">
+                                    <input
+                                        type="range"
+                                        class="form-range"
+                                        id="age"
+                                        name="age"
+                                        min="1"
+                                        max="120"
+                                        value="30"
+                                        required
+                                    >
+                                </div>
+                                <div class="col-3">
+                                    <span id="age-value" class="fw-bold">30</span> yosh
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gender Input -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-venus-mars text-primary"></i> Jins (Ixtiyoriy)
+                            </label>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <input type="radio" class="btn-check" id="male" name="gender" value="erkak" autocomplete="off">
+                                    <label class="btn btn-outline-primary w-100" for="male">
+                                        <i class="fas fa-mars"></i> Erkak
+                                    </label>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <input type="radio" class="btn-check" id="female" name="gender" value="ayol" autocomplete="off">
+                                    <label class="btn btn-outline-primary w-100" for="female">
+                                        <i class="fas fa-venus"></i> Ayol
+                                    </label>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <input type="radio" class="btn-check" id="other" name="gender" value="boshqa" autocomplete="off" checked>
+                                    <label class="btn btn-outline-primary w-100" for="other">
+                                        <i class="fas fa-genderless"></i> Boshqa
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Duration Input -->
+                        <div class="mb-4">
+                            <label for="duration" class="form-label fw-bold">
+                                <i class="fas fa-clock text-primary"></i> Alomatlaringiz qancha vaqtdan beri davom etmoqda?
+                            </label>
+                            <select class="form-select" id="duration" name="duration" required>
+                                <option value="">Davomiylikni tanlang</option>
+                                <option value="hours">24 soatdan kam</option>
+                                <option value="1-3_days">1-3 kun</option>
+                                <option value="4-7_days">4-7 kun</option>
+                                <option value="1-2_weeks">1-2 hafta</option>
+                                <option value="2-4_weeks">2-4 hafta</option>
+                                <option value="more_than_month">Bir oydan ko'proq</option>
+                            </select>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="fas fa-brain"></i> Alomatlarni tahlil qilish
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Safety Note -->
+            <div class="alert alert-info mt-4">
+                <h6><i class="fas fa-shield-alt"></i> Xavfsizlik eslatmasi</h6>
+                <p>Bu tahlil faqat umumiy axborot maqsadlarida. Agar sizda og'ir alomatlar bo'lsa yoki sog'lig'ingiz haqida tashvishlansangiz, darhol tibbiy mutaxassis bilan bog'laning. Favqulodda holatda favqulodda xizmatlarga qo'ng'iroq qiling.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

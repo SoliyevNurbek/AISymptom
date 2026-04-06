@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Bosh sahifa - AI Alomat Tekshiruvi Demo{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 hero-content">
+                <h1 class="mb-4">AI Alomat Tekshiruvi Demo</h1>
+                <p class="lead mb-4 text-muted">
+                    Alomatlaringiz uchun AI yordamida yo'l-yo'riq oling. Bu faqat umumiy xabardorlik uchun ta'limiy vosita.
+                </p>
+                <div class="mb-4">
+                    <span class="trust-badge"><i class="fas fa-shield-alt"></i> Tibbiy tashxis emas</span>
+                    <span class="trust-badge"><i class="fas fa-brain"></i> AI yordamida</span>
+                    <span class="trust-badge"><i class="fas fa-exclamation-triangle"></i> Favqulodda ogohlantirishlar</span>
+                    <span class="trust-badge"><i class="fas fa-clock"></i> Tez alomat tekshiruvi</span>
+                </div>
+                <div class="mb-4">
+                    <p class="text-danger fw-bold">
+                        <i class="fas fa-info-circle"></i>
+                        Bu tibbiy tashxis emas. Bu faqat umumiy AI tavsiyasi.<br>
+                        <small class="text-muted">This is not a medical diagnosis. It is general AI-assisted guidance only.</small>
+                    </p>
+                </div>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{{ url_for('app_page') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play"></i> Tekshiruvni boshlash
+                    </a>
+                    <a href="#how-it-works" class="btn btn-outline-primary btn-lg">
+                        AI ishlashi
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="text-center">
+                    <!-- Placeholder for medical-tech illustration -->
+                    <div style="height: 400px; background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal)); border-radius: var(--border-radius-large); display: flex; align-items: center; justify-content: center; color: white; font-size: 4rem;">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section id="how-it-works" class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2>Qanday ishlaydi</h2>
+                <p class="text-muted">Alomatlaringiz uchun AI yordamida yo'l-yo'riq olish uchun oddiy qadamlar</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-edit fa-3x text-primary"></i>
+                        </div>
+                        <h4>1. Alomatlarni kiriting</h4>
+                        <p>Yosh, jins (ixtiyoriy) va alomatlar davomiyligini kiriting.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-brain fa-3x text-primary"></i>
+                        </div>
+                        <h4>2. AI tahlili</h4>
+                        <p>Bizning AI sizning ma'lumotlaringizni tahlil qiladi va umumiy yo'l-yo'riq beradi.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-clipboard-check fa-3x text-primary"></i>
+                        </div>
+                        <h4>3. Natijalarni oling</h4>
+                        <p>Xavf darajasi, mutaxassis tavsiyasi va umumiy maslahatlarni oling.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- What You Get Section -->
+<section class="section section-gray">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2>Tizim nima qaytaradi</h2>
+                <p class="text-muted">Keng qamrovli AI yordamida yo'l-yo'riq</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4><i class="fas fa-chart-line text-success"></i> Xavf darajasi baholash</h4>
+                        <p>Alomatlar naqshiga asosan umumiy xavf toifasi: Past, O'rta yoki Yuqori.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4><i class="fas fa-user-md text-info"></i> Mutaxassis tavsiyasi</h4>
+                        <p>Davolash uchun qaysi tibbiy mutaxassis bilan maslahatlashish kerakligi.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4><i class="fas fa-lightbulb text-warning"></i> Umumiy maslahat</h4>
+                        <p>Umumiy tibbiy bilimlarga asosan keyingi qadamlar va maslahatlar.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4><i class="fas fa-exclamation-triangle text-danger"></i> Favqulodda ogohlantirishlar</h4>
+                        <p>Darhol tibbiy yordamga murojaat qilishni talab qiladigan alomatlar uchun aniq ogohlantirishlar.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Safety Disclaimer Section -->
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2>Xavfsizlik & Ogohlantirish</h2>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h4 class="card-title">Muhim xavfsizlik eslatmasi</h4>
+                        <p class="card-text lead">
+                            <strong>Bu tibbiy tashxis emas. Bu faqat umumiy AI tavsiyasi.</strong>
+                        </p>
+                        <p class="card-text">
+                            Bu vosita faqat umumiy axborot va ta'lim uchun mo'ljallangan. Professional tibbiy maslahat o'rnini bosmaydi.
+                        </p>
+                        <p class="card-text text-muted">
+                            Sog'liq bilan bog'liq shubhalarda mutaxassisga murojaat qiling.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Why This Tool Section -->
+<section class="section section-gray">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2>Bu vosita nima uchun foydali</h2>
+                <p class="text-muted">Axborotli sog'liq qarorlarini qabul qilishni kuchaytirish</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x text-primary mb-3"></i>
+                        <h5>Tez xabardorlik</h5>
+                        <p>Qabulga kutmasdan alomatlaringiz haqida darhol umumiy yo'l-yo'riq oling.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-brain fa-2x text-primary mb-3"></i>
+                        <h5>AI quvvatida tushunchalar</h5>
+                        <p>Alomatlar kombinatsiyalarida naqshlarni aniqlash uchun sun'iy intellektdan foydalaning.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-shield-alt fa-2x text-primary mb-3"></i>
+                        <h5>Avval xavfsizlik</h5>
+                        <p>Favqulodda ogohlantirishlar va aniq ogohlantirishlar bilan sog'lig'ingiz va xavfsizlig'ingizni birinchi o'ringa qo'ygan holda.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Section -->
+<section class="section">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2>Tez-tez beriladigan savollar</h2>
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                Bu tibbiy tashxismi?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                Yo'q, bu tibbiy tashxis emas. Bu vosita umumiy alomat naqshlariga asosan umumiy AI yordamida yo'l-yo'riq beradi. Bu faqat ta'limiy maqsadlarda ishlatiladi va professional tibbiy maslahatni o'rnib bo'lmaydi.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                Agar menda tashvishli alomatlar bo'lsa nima qilishim kerak?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                If you have concerning symptoms, especially those flagged as high risk or emergency, please contact a healthcare professional immediately or seek emergency medical care if needed.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                AI tahlili qanchalik aniq?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                The AI provides general guidance based on common medical knowledge and symptom patterns. It is not a substitute for professional medical evaluation and should be used for informational purposes only.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                Mening ma'lumotlarim xavfsizmi?
+                            </button>
+                        </h2>
+                        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                We prioritize your privacy. Input data is processed locally and not stored permanently. However, for a full privacy policy, please consult our terms of service.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>AI Alomat Tekshiruvi Demo</h5>
+                <p>AI yordamida alomat yo'l-yo'riq demo. Faqat ta'limiy maqsadlarda.</p>
+                <p class="text-warning fw-bold">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Bu tibbiy tashxis emas. Bu faqat umumiy AI tavsiyasi.
+                </p>
+            </div>
+            <div class="col-md-3">
+                <h6>Havolalar</h6>
+                <ul class="list-unstyled">
+                    <li><a href="#how-it-works">Qanday ishlaydi</a></li>
+                    <li><a href="{{ url_for('app_page') }}">Tekshiruvni boshlash</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                </ul>
+            </div>
+            <div class="col-md-3">
+                <h6>Yuridik</h6>
+                <ul class="list-unstyled">
+                    <li><a href="#">Maxfiylik siyosati</a></li>
+                    <li><a href="#">Xizmat shartlari</a></li>
+                    <li><a href="#">Ogohlantirish</a></li>
+                </ul>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col-12 text-center">
+                <p>&copy; 2026 AI Alomat Tekshiruvi Demo. Faqat ta'limiy maqsadlarda.</p>
+            </div>
+        </div>
+    </div>
+</footer>
+{% endblock %}

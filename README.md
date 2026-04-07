@@ -1,17 +1,17 @@
 # AI Symptom Assistant
 
-Flask asosidagi web ilova va Telegram bot. Tizim foydalanuvchi simptomlari, yoshi, jinsi va simptom davomiyligini qabul qiladi, so'ng Gemini API orqali umumiy triage yo'l-yo'riq, xavf darajasi va tavsiya etilgan mutaxassisni qaytaradi.
+Flask asosidagi web ilova va Telegram bot. Tizim foydalanuvchi simptomlari, yoshi, jinsi va davomiyligini qabul qiladi, Gemini API yoki xavfsiz fallback orqali umumiy triage yo'l-yo'riq qaytaradi.
 
-Muhim: bu loyiha tibbiy tashxis vositasi emas. Natijalar faqat umumiy axborot va yo'naltirish uchun.
+Muhim: bu loyiha tibbiy tashxis qo'ymaydi. Natijalar faqat umumiy axborot va yo'naltirish uchun.
 
-## Nimalar Bor
-- Web interfeys
-- Telegram bot
+## Imkoniyatlar
+- Web orqali simptom tahlili
+- Telegram bot orqali simptom tahlili
 - Gemini API integratsiyasi
 - API ishlamasa fallback tahlil
-- SQLite tarix saqlash
-- Ko'p tilli interfeys
-  `uz_latn`, `uz_cyrl`, `en`, `ru`
+- Admin login va himoyalangan dashboard
+- Telegram tahlillari uchun admin ko'rinishi
+- Ko'p tilli interfeys: `uz_latn`, `uz_cyrl`, `en`, `ru`
 
 ## Stack
 - Python 3.10+
@@ -33,112 +33,124 @@ AISymptom/
 ```
 
 ## Tez Ishga Tushirish
-1. Virtual environment yarating:
+1. Virtual environment yarating.
 ```powershell
 python -m venv venv
 ```
 
-2. Uni yoqing:
+2. Uni yoqing.
 ```powershell
 venv\Scripts\Activate.ps1
 ```
 
-3. Dependency o'rnating:
+3. Dependency o'rnating.
 ```powershell
 pip install -r requirements.txt
 ```
 
-4. Env fayl yarating:
+4. Namuna env fayldan lokal env yarating.
 ```powershell
 Copy-Item .env.example .env
 ```
 
-5. `.env` ni to'ldiring:
+5. `.env` ni to'ldiring.
 ```env
 GEMINI_API_KEY=your_real_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_RETRIES=3
+AI_TIMEOUT_SECONDS=8
+
 TELEGRAM_BOT_TOKEN=your_real_telegram_bot_token
+
+FLASK_SECRET_KEY=replace_with_long_random_secret
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=replace_with_strong_password
+# yoki:
+# ADMIN_PASSWORD_HASH=pbkdf2:sha256:...
+
+SESSION_COOKIE_SECURE=false
+ADMIN_SESSION_MINUTES=30
+ADMIN_LOGIN_WINDOW_SECONDS=900
+ADMIN_LOGIN_MAX_ATTEMPTS=5
 ```
 
-6. Ilovani ishga tushiring:
+6. Ilovani ishga tushiring.
 ```powershell
 venv\Scripts\python.exe app.py
 ```
 
-7. Web:
+7. Web manzil.
 ```text
 http://127.0.0.1:5000
 ```
 
-8. Telegram:
-- botni oching
-- `/start` yuboring
-- `/language` bilan til tanlang
-- `/analyze` bilan tahlil boshlang
-
-## Konfiguratsiya
-Qo'llab-quvvatlanadigan environment variable lar:
-
-```env
-GEMINI_API_KEY=your_real_gemini_api_key
-TELEGRAM_BOT_TOKEN=your_real_telegram_bot_token
+8. Admin sahifa.
+```text
+http://127.0.0.1:5000/admin/login
 ```
 
-`.env` gitga kirmaydi. Namuna fayl: [.env.example](/D:/Proekt2026/AISymptom/.env.example)
+## Admin Xavfsizligi
+Admin qismi uchun quyidagi himoyalar mavjud:
+- Session cookie `HttpOnly`
+- `SameSite=Lax`
+- ixtiyoriy `SESSION_COOKIE_SECURE=true` orqali faqat HTTPS cookie
+- CSRF token bilan himoyalangan login va logout
+- brute-force login limit
+- admin sahifalar uchun `no-store` cache policy
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: no-referrer`
 
-## Qanday Ishlaydi
-1. Foydalanuvchi web yoki Telegram orqali simptom yuboradi.
-2. Tizim yosh, jins va davomiylikni yig'adi.
-3. Backend Gemini uchun structured prompt tayyorlaydi.
-4. Gemini JSON formatda quyidagilarni qaytaradi:
-   `risk_level`, `specialist`, `summary`, `advice`, `possible_causes`, `when_to_seek_help`, `emergency`
-5. Natija tanlangan tilga va kanalga mos formatlanadi.
-6. Agar API ishlamasa, xavfsiz fallback javob ishlatiladi.
-7. Tahlil SQLite bazaga yoziladi.
+Tavsiya:
+- `ADMIN_PASSWORD` o'rniga `ADMIN_PASSWORD_HASH` ishlating
+- `FLASK_SECRET_KEY` uzun va tasodifiy bo'lsin
+- productionda albatta HTTPS ishlating va `SESSION_COOKIE_SECURE=true` qiling
+- admin loginni reverse proxy bilan IP whitelist qilish yaxshi amaliyot
 
-## Web
-- Til switcher yuqori o'ng burchakda
-- Query param bilan ham ishlaydi:
-  `/?lang=uz_latn`
-  `/?lang=uz_cyrl`
-  `/?lang=en`
-  `/?lang=ru`
+## Admin Dashboard
+Admin dashboardda quyidagilar ko'rinadi:
+- Telegram `username`
+- telefon raqami, agar contact yuborilgan bo'lsa
+- foydalanuvchi yozgan simptom matni
+- AI qaytargan tahlil
+- xavf darajasi
+- tavsiya etilgan mutaxassis
+- yozilgan vaqt
 
-## Telegram
-- Long-polling asosida ishlaydi
-- Qo'llab-quvvatlanadigan buyruqlar:
-  `/start`
-  `/analyze`
-  `/help`
-  `/cancel`
-  `/language`
-- Natija ikonlar va bo'limlar bilan formatlanadi
-- Til tanlansa, keyingi javoblar o'sha tilda chiqadi
+## Telegram Ishlash Tartibi
+- `/start` bilan bot ishga tushadi
+- `/analyze` bilan yangi tahlil boshlanadi
+- bot simptom, yosh, jins va davomiylikni yig'adi
+- natija formatlangan holda qaytadi
+- analiz admin dashboard uchun bazaga yoziladi
+
+Telefon raqami Telegram tomonidan avtomatik berilmaydi. U faqat foydalanuvchi `contact` yuborsa saqlanadi.
 
 ## Fallback Rejim
-Quyidagi holatlarda fallback javob ishlaydi:
+Quyidagi holatlarda fallback ishlaydi:
 - `GEMINI_API_KEY` yo'q
-- API quota yoki billing muammosi
 - timeout yoki tarmoq xatosi
-- Gemini bo'sh yoki noto'g'ri JSON qaytarsa
+- Gemini `high demand`
+- quota yoki billing muammosi
+- bo'sh yoki noto'g'ri JSON javob
+
+`high demand` holatida tizim fallbackdan oldin avtomatik qayta urinib ko'radi.
+
+## Performance
+Loyihada bir nechta optimizatsiya yoqilgan:
+- Gemini timeout qisqartirilgan
+- retry logikasi qo'shilgan
+- i18n va language link cache
+- SQLite `WAL` rejimi
+- ba'zi ortiqcha DB so'rovlari olib tashlangan
 
 ## Muhim Fayllar
-- [app.py](/D:/Proekt2026/AISymptom/app.py): asosiy backend, Gemini, Telegram, i18n, fallback
-- [templates/app.html](/D:/Proekt2026/AISymptom/templates/app.html): web forma
-- [templates/result.html](/D:/Proekt2026/AISymptom/templates/result.html): natija sahifasi
-- [templates/history.html](/D:/Proekt2026/AISymptom/templates/history.html): tarix sahifasi
-- [templates/base.html](/D:/Proekt2026/AISymptom/templates/base.html): umumiy layout va web til switcher
-- [static/js/app.js](/D:/Proekt2026/AISymptom/static/js/app.js): frontend form behaviour
-
-## Xavfsizlik
-- API kalitlarni repoga commit qilmang
-- `.env` lokal saqlansin
-- Bu loyiha diagnostika vositasi emas
-- Og'ir simptomlarda foydalanuvchini darhol shifokor yoki tez yordamga yo'naltirish kerak
-
-## Hozirgi Cheklovlar
-- Telegram integratsiya long-pollingda, webhook emas
-- Network bo'lmasa real Gemini tekshiruvi ishlamaydi
-- SQLite lokal storage sifatida ishlatiladi
+- [app.py](/D:/Proekt2026/AISymptom/app.py): backend, Telegram, Gemini, admin auth
+- [templates/result.html](/D:/Proekt2026/AISymptom/templates/result.html): premium natija sahifasi
+- [templates/admin_login.html](/D:/Proekt2026/AISymptom/templates/admin_login.html): admin login
+- [templates/admin_dashboard.html](/D:/Proekt2026/AISymptom/templates/admin_dashboard.html): admin dashboard
+- [templates/base.html](/D:/Proekt2026/AISymptom/templates/base.html): umumiy layout va navbar
+- [static/css/styles.css](/D:/Proekt2026/AISymptom/static/css/styles.css): premium UI stillari
 
 ## Development
 Sintaksis tekshiruv:
@@ -151,5 +163,10 @@ Lokal import testi:
 venv\Scripts\python.exe -c "import app; print('ok')"
 ```
 
-## Eslatma
-Kod SDKsiz, `urllib` orqali Gemini REST API bilan ishlaydi. Bu dependency sonini kichik tutadi va deployni soddalashtiradi.
+## Production Tavsiyalar
+- SQLite o'rniga PostgreSQL ishlatish yaxshiroq
+- Telegram polling o'rniga webhook ishlatish yaxshiroq
+- Nginx yoki Caddy ortiga qo'yish kerak
+- HTTPS majburiy bo'lishi kerak
+- `.env` va DB backup fayllarini repo ga commit qilmang
+- real API kalitlar oshkor bo'lsa darhol rotate qiling

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<section class="admin-dashboard-shell">
+    <div class="container py-5">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+            <div>
+                <h1 class="mb-1">Telegram Analizlari</h1>
+                <p class="text-muted mb-0">Admin: {{ admin_username }}</p>
+            </div>
+            <form method="post" action="{{ url_for('admin_logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-secondary">Chiqish</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                {% if records %}
+                <div class="table-responsive">
+                    <table class="table admin-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Sana</th>
+                                <th>Username</th>
+                                <th>Telefon</th>
+                                <th>Ism</th>
+                                <th>Kasallik matni</th>
+                                <th>AI tashxisi</th>
+                                <th>Xavf</th>
+                                <th>Mutaxassis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in records %}
+                            <tr>
+                                <td>{{ item.created_at }}</td>
+                                <td>@{{ item.username if item.username != '-' else '-' }}</td>
+                                <td>{{ item.phone_number }}</td>
+                                <td>{{ item.full_name }}</td>
+                                <td class="admin-cell-text">{{ item.symptoms }}</td>
+                                <td class="admin-cell-text">{{ item.ai_diagnosis }}</td>
+                                <td>{{ item.risk_level }}</td>
+                                <td>{{ item.specialist }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <h2 class="h4 mb-2">Hali ma'lumot yo'q</h2>
+                    <p class="text-muted mb-0">Telegram orqali yangi analizlar kelgach shu yerda chiqadi.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -14,18 +14,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    {% if language_links %}
-    <div class="container py-3">
-        <div class="d-flex justify-content-end">
-            <div class="btn-group" role="group" aria-label="Language switcher">
-                {% for item in language_links %}
-                <a href="{{ item.url }}" class="btn btn-sm {% if lang == item.code %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                    {{ item.label }}
+    {% if (language_links and not hide_language_switcher) or not hide_admin_link %}
+    <header class="topbar-shell">
+        <div class="container">
+            <div class="topbar">
+                <a href="{{ url_for('index', lang=lang or 'uz_latn') }}" class="topbar-brand">
+                    <i class="fas fa-heart-pulse"></i>
+                    <span>AI Symptom</span>
                 </a>
-                {% endfor %}
+                <div class="topbar-actions">
+                    {% if language_links and not hide_language_switcher %}
+                    <div class="btn-group" role="group" aria-label="Language switcher">
+                        {% for item in language_links %}
+                        <a href="{{ item.url }}" class="btn btn-sm {% if lang == item.code %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            {{ item.label }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if not hide_admin_link %}
+                    <a href="{{ url_for('admin_login') }}" class="btn btn-sm admin-nav-link">
+                        <i class="fas fa-lock"></i> Login
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
-    </div>
+    </header>
     {% endif %}
     {% block content %}{% endblock %}
 

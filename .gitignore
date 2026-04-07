@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+.envrc
+*.secret
+*.secrets
 
 # Python cache
 __pycache__/
@@ -20,10 +23,13 @@ instance/
 .mypy_cache/
 .ruff_cache/
 .cache/
+.tmp/
+.temp/
 .coverage
 .coverage.*
 htmlcov/
 *.log
+*.pid
 
 # Local databases
 *.db
@@ -34,6 +40,9 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+*.bak
+*.orig
+*.rej
 
 # OS / editor files
 .DS_Store

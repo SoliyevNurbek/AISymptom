@@ -3,167 +3,244 @@
 {% block title %}{{ ui.result_title }} - {{ ui.brand }}{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="text-center mb-5">
-                <h1>{{ ui.result_title }}</h1>
-                <p class="lead text-muted">{{ result.risk_summary }}</p>
-                <div class="alert alert-warning">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>{{ ui.not_diagnosis }}.</strong>
-                    {{ ui.safety_note_body }}
-                </div>
-                {% if result.user_notice %}
-                <div class="notice-card {{ result.user_notice.tone }}">
-                    <div class="notice-icon">
-                        <i class="fas {{ result.user_notice.icon }}"></i>
+<section class="result-shell py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-xl-10">
+                <div class="result-premium-card">
+                    <div class="result-premium-header">
+                        <div class="result-premium-title">
+                            <span class="eyebrow-label">🧾 Premium Medical AI Result</span>
+                            <h1>{{ ui.result_title }}</h1>
+                            <p>{{ result.risk_summary }}</p>
+                        </div>
+                        <div class="result-risk-badge risk-{{ result.risk_class }}">
+                            <span class="risk-dot"></span>
+                            <span>{{ result.risk_label }}</span>
+                        </div>
                     </div>
-                    <div class="notice-content">
-                        <h5 class="mb-1">{{ result.user_notice.title }}</h5>
-                        <p class="mb-1">{{ result.user_notice.message }}</p>
-                        <small>{{ result.user_notice.details }}</small>
+
+                    {% if result.user_notice %}
+                    <div class="notice-card {{ result.user_notice.tone }}">
+                        <div class="notice-icon">
+                            <i class="fas {{ result.user_notice.icon }}"></i>
+                        </div>
+                        <div class="notice-content">
+                            <h5 class="mb-1">{{ result.user_notice.title }}</h5>
+                            <p class="mb-1">{{ result.user_notice.message }}</p>
+                            <small>{{ result.user_notice.details }}</small>
+                        </div>
                     </div>
-                </div>
-                {% elif result.warning %}
-                <div class="alert alert-secondary">
-                    <i class="fas fa-robot me-2"></i>{{ result.warning }}
-                </div>
-                {% endif %}
-            </div>
+                    {% elif result.warning %}
+                    <div class="notice-card soft-warning">
+                        <div class="notice-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="notice-content">
+                            <h5 class="mb-1">AI eslatma</h5>
+                            <p class="mb-0">{{ result.warning }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
 
-            {% if result.emergency %}
-            <div class="emergency-banner">
-                <i class="fas fa-triangle-exclamation"></i>
-                <strong>{{ ui.emergency_alerts }}:</strong> {{ result.when_to_seek_help[0] if result.when_to_seek_help else ui.safety_note_body }}
-            </div>
-            {% endif %}
+                    <div class="disclaimer-banner">
+                        <i class="fas fa-circle-info"></i>
+                        <div>
+                            <strong>{{ ui.not_diagnosis }}.</strong>
+                            <span>{{ ui.safety_note_body }}</span>
+                        </div>
+                    </div>
 
-            <div class="card mb-4 result-hero border-0">
-                <div class="card-body py-4">
-                    <div class="row align-items-center g-4">
-                        <div class="col-md-7">
-                            <div class="d-flex align-items-center gap-3 mb-3">
-                                <div class="result-icon-circle risk-{{ result.risk_class }}">
-                                    <i class="fas {{ result.risk_icon }}"></i>
-                                </div>
-                                <div>
-                                    <div class="text-muted small text-uppercase">{{ ui.risk_level }}</div>
-                                    <h2 class="mb-0">{{ result.risk_label }}</h2>
+                    {% if result.emergency %}
+                    <div class="emergency-banner premium-emergency">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <div>
+                            <strong>{{ ui.emergency_alerts }}</strong>
+                            <div>{{ result.when_to_seek_help[0] if result.when_to_seek_help else ui.safety_note_body }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-7">
+                            <div class="result-hero card border-0 h-100">
+                                <div class="card-body p-4">
+                                    <div class="hero-topline">
+                                        <div class="result-icon-circle risk-{{ result.risk_class }}">
+                                            <i class="fas {{ result.risk_icon }}"></i>
+                                        </div>
+                                        <div>
+                                            <div class="section-kicker">📊 {{ ui.risk_level }}</div>
+                                            <h2 class="mb-2">{{ result.risk_label }}</h2>
+                                            <p class="mb-0 text-muted">{{ result.risk_summary }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="risk-meter mt-4">
+                                        <div class="risk-meter-track">
+                                            <span class="risk-meter-fill risk-{{ result.risk_class }}"></span>
+                                        </div>
+                                        <div class="risk-meter-labels">
+                                            <span>Past</span>
+                                            <span>O'rta</span>
+                                            <span>Yuqori</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <p class="mb-0 text-muted">{{ result.risk_summary }}</p>
                         </div>
-                        <div class="col-md-5">
-                            <div class="metric-card">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="result-icon-circle specialist">
-                                        <i class="fas {{ result.specialist_icon }}"></i>
-                                    </div>
+                        <div class="col-lg-5">
+                            <div class="stacked-info-grid">
+                                <div class="metric-card premium-metric specialist-card">
+                                    <div class="metric-icon"><i class="fas {{ result.specialist_icon }}"></i></div>
                                     <div>
-                                        <div class="text-muted small">{{ ui.specialist }}</div>
-                                        <div class="fw-bold fs-5">{{ result.specialist }}</div>
+                                        <div class="section-kicker">👨‍⚕️ {{ ui.specialist }}</div>
+                                        <div class="metric-value">{{ result.specialist }}</div>
                                     </div>
                                 </div>
-                                <div class="mt-3 small text-muted">
-                                    {{ ui.source }}: {% if result.source == 'gemini' %}{{ ui.gemini_source }}{% else %}{{ ui.fallback_source }}{% endif %}
+                                <div class="metric-card premium-metric emergency-state {% if result.emergency %}is-alert{% else %}is-calm{% endif %}">
+                                    <div class="metric-icon"><i class="fas {% if result.emergency %}fa-triangle-exclamation{% else %}fa-shield-heart{% endif %}"></i></div>
+                                    <div>
+                                        <div class="section-kicker">🚨 {{ ui.emergency }}</div>
+                                        <div class="metric-value">{% if result.emergency %}{{ ui.yes }}{% else %}{{ ui.no }}{% endif %}</div>
+                                    </div>
+                                </div>
+                                <div class="metric-card premium-metric source-state">
+                                    <div class="metric-icon"><i class="fas fa-microchip"></i></div>
+                                    <div>
+                                        <div class="section-kicker">ℹ️ {{ ui.source }}</div>
+                                        <div class="metric-value">{% if result.source == 'gemini' %}{{ ui.gemini_source }}{% else %}{{ ui.fallback_source }}{% endif %}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="fas fa-list-check fa-2x text-success me-3"></i>
-                                <h4 class="mb-0">{{ ui.advice }}</h4>
-                            </div>
-                            <div class="advice-list">
-                                {% for item in result.advice_items %}
-                                <div class="advice-row tone-{{ item.tone }}">
-                                    <i class="fas {{ item.icon }}"></i>
-                                    <span>{{ item.text }}</span>
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div class="card result-section-card h-100">
+                                <div class="card-body">
+                                    <div class="section-heading">
+                                        <div class="section-heading-icon summary"><i class="fas fa-file-waveform"></i></div>
+                                        <div>
+                                            <div class="section-kicker">📝 Insight</div>
+                                            <h3>{{ ui.summary }}</h3>
+                                        </div>
+                                    </div>
+                                    <p class="section-copy mb-0">{{ result.risk_summary }}</p>
                                 </div>
-                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div class="card result-section-card h-100">
+                                <div class="card-body">
+                                    <div class="section-heading">
+                                        <div class="section-heading-icon info"><i class="fas fa-notes-medical"></i></div>
+                                        <div>
+                                            <div class="section-kicker">📋 Input</div>
+                                            <h3>{{ ui.entered_data }}</h3>
+                                        </div>
+                                    </div>
+                                    <ul class="result-list plain premium-plain-list">
+                                        <li><strong>{{ ui.symptoms }}:</strong> {{ result.symptoms }}</li>
+                                        <li><strong>{{ ui.age }}:</strong> {{ result.age }} {{ ui.years }}</li>
+                                        <li><strong>{{ ui.duration_question }}:</strong> {{ result.duration }}</li>
+                                        {% if result.gender %}
+                                        <li><strong>{{ ui.gender }}:</strong> {{ result.gender }}</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div class="card result-section-card h-100">
+                                <div class="card-body">
+                                    <div class="section-heading">
+                                        <div class="section-heading-icon advice"><i class="fas fa-list-check"></i></div>
+                                        <div>
+                                            <div class="section-kicker">✅ Care Plan</div>
+                                            <h3>{{ ui.advice }}</h3>
+                                        </div>
+                                    </div>
+                                    <div class="advice-list">
+                                        {% for item in result.advice_items %}
+                                        <div class="advice-row tone-{{ item.tone }}">
+                                            <i class="fas {{ item.icon }}"></i>
+                                            <span>{{ item.text }}</span>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div class="card result-section-card h-100">
+                                <div class="card-body">
+                                    <div class="section-heading">
+                                        <div class="section-heading-icon causes"><i class="fas fa-magnifying-glass-chart"></i></div>
+                                        <div>
+                                            <div class="section-kicker">🔎 Possibilities</div>
+                                            <h3>{{ ui.causes }}</h3>
+                                        </div>
+                                    </div>
+                                    <ul class="result-list premium-result-list">
+                                        {% for cause in result.possible_causes %}
+                                        <li>
+                                            <span class="list-icon">{% if 'stress' in cause.lower() %}🧠{% elif 'suv' in cause.lower() %}💧{% elif 'uyqu' in cause.lower() %}🌙{% elif 'virus' in cause.lower() or 'infek' in cause.lower() %}🦠{% else %}🔹{% endif %}</span>
+                                            <span>{{ cause }}</span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="card result-section-card emergency-card">
+                                <div class="card-body">
+                                    <div class="section-heading">
+                                        <div class="section-heading-icon warning"><i class="fas fa-triangle-exclamation"></i></div>
+                                        <div>
+                                            <div class="section-kicker">⚠️ Safety Triggers</div>
+                                            <h3>{{ ui.seek_help }}</h3>
+                                        </div>
+                                    </div>
+                                    <ul class="result-list premium-result-list urgent-list">
+                                        {% for note in result.when_to_seek_help %}
+                                        <li>
+                                            <span class="list-icon">{% if 'darhol' in note.lower() %}⛔{% elif 'tez' in note.lower() or 'nafas' in note.lower() %}🚨{% else %}⚠️{% endif %}</span>
+                                            <span>{{ note }}</span>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="fas fa-magnifying-glass fa-2x text-primary me-3"></i>
-                                <h4 class="mb-0">{{ ui.causes }}</h4>
-                            </div>
-                            <ul class="result-list">
-                                {% for cause in result.possible_causes %}
-                                <li><i class="fas fa-circle-dot text-primary me-2"></i>{{ cause }}</li>
-                                {% endfor %}
-                            </ul>
+                    <div class="result-actions-wrap">
+                        <div class="btn-group result-actions" role="group">
+                            <a href="{{ url_for('app_page', lang=lang) }}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-redo me-2"></i>{{ ui.other_analysis }}
+                            </a>
+                            <a href="{{ url_for('index', lang=lang) }}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-house me-2"></i>{{ ui.back_home }}
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="result-footer-note">
+                        <i class="fas fa-shield-heart"></i>
+                        <div>
+                            <strong>{{ ui.final_note }}</strong>
+                            <p class="mb-0">{{ ui.safety_note_body }}</p>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="fas fa-clock fa-2x text-warning me-3"></i>
-                                <h4 class="mb-0">{{ ui.seek_help }}</h4>
-                            </div>
-                            <ul class="result-list">
-                                {% for note in result.when_to_seek_help %}
-                                <li><i class="fas fa-triangle-exclamation text-warning me-2"></i>{{ note }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-3">
-                                <i class="fas fa-notes-medical fa-2x text-info me-3"></i>
-                                <h4 class="mb-0">{{ ui.entered_data }}</h4>
-                            </div>
-                            <ul class="result-list plain">
-                                <li><strong>{{ ui.symptoms }}:</strong> {{ result.symptoms }}</li>
-                                <li><strong>{{ ui.age }}:</strong> {{ result.age }} {{ ui.years }}</li>
-                                <li><strong>{{ ui.duration_question }}:</strong> {{ result.duration }}</li>
-                                {% if result.gender %}
-                                <li><strong>{{ ui.gender }}:</strong> {{ result.gender }}</li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-center">
-                <div class="btn-group result-actions" role="group">
-                    <a href="{{ url_for('app_page', lang=lang) }}" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-redo me-2"></i>{{ ui.other_analysis }}
-                    </a>
-                    <a href="{{ url_for('index', lang=lang) }}" class="btn btn-secondary btn-lg">
-                        <i class="fas fa-home me-2"></i>{{ ui.back_home }}
-                    </a>
-                </div>
-            </div>
-
-            <div class="alert alert-danger mt-4 text-center">
-                <h5><i class="fas fa-shield-heart me-2"></i>{{ ui.final_note }}</h5>
-                <p class="mb-0">
-                    {{ ui.safety_note_body }}
-                </p>
             </div>
         </div>
     </div>
-</div>
+</section>
 {% endblock %}

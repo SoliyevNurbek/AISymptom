@@ -1,4 +1,4 @@
-from flask import Flask, abort, render_template, request
+from flask import Flask, abort, redirect, render_template, request, session, url_for
 import html
 import json
 import os
@@ -8,8 +8,11 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
+from functools import lru_cache, wraps
+import secrets
 from urllib.parse import urlencode
+from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 app.config["AI_TIMEOUT_SECONDS"] = 12
@@ -21,9 +24,12 @@ app.config["MAX_SYMPTOMS_LENGTH"] = 1200
 app.config["MAX_TELEGRAM_MESSAGE_LENGTH"] = 2000
 app.config["WEB_RATE_LIMIT_WINDOW_SECONDS"] = 60
 app.config["WEB_RATE_LIMIT_MAX_REQUESTS"] = 12
+app.config["ADMIN_LOGIN_WINDOW_SECONDS"] = int(os.environ.get("ADMIN_LOGIN_WINDOW_SECONDS", "900"))
+app.config["ADMIN_LOGIN_MAX_ATTEMPTS"] = int(os.environ.get("ADMIN_LOGIN_MAX_ATTEMPTS", "5"))
 
 RATE_LIMIT_LOCK = threading.Lock()
 WEB_RATE_LIMIT_STATE = {}
+ADMIN_LOGIN_RATE_LIMIT_STATE = {}
 
 
 def load_env_file():
@@ -45,11 +51,21 @@ def load_env_file():
 
 
 load_env_file()
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "change-me-in-env")
+app.config["AI_TIMEOUT_SECONDS"] = int(os.environ.get("AI_TIMEOUT_SECONDS", "8"))
+app.config["ADMIN_LOGIN_WINDOW_SECONDS"] = int(os.environ.get("ADMIN_LOGIN_WINDOW_SECONDS", "900"))
+app.config["ADMIN_LOGIN_MAX_ATTEMPTS"] = int(os.environ.get("ADMIN_LOGIN_MAX_ATTEMPTS", "5"))
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "").strip().lower() == "true"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=int(os.environ.get("ADMIN_SESSION_MINUTES", "30")))
 
 
 def init_db():
     conn = sqlite3.connect("symptom_checker.db")
     c = conn.cursor()
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA synchronous=NORMAL")
     c.execute(
         """CREATE TABLE IF NOT EXISTS analyses
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,8 +94,35 @@ def init_db():
                   language TEXT NOT NULL,
                   updated_at TIMESTAMP NOT NULL)"""
     )
+    c.execute(
+        """CREATE TABLE IF NOT EXISTS telegram_analyses
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  chat_id INTEGER NOT NULL,
+                  username TEXT,
+                  full_name TEXT,
+                  phone_number TEXT,
+                  symptoms TEXT NOT NULL,
+                  ai_diagnosis TEXT NOT NULL,
+                  risk_level TEXT,
+                  specialist TEXT,
+                  created_at TIMESTAMP NOT NULL)"""
+    )
+    ensure_column_exists(c, "telegram_users", "username", "TEXT")
+    ensure_column_exists(c, "telegram_users", "full_name", "TEXT")
+    ensure_column_exists(c, "telegram_users", "phone_number", "TEXT")
+    ensure_column_exists(c, "telegram_analyses", "phone_number", "TEXT")
     conn.commit()
     conn.close()
+
+
+def ensure_column_exists(cursor, table_name, column_name, column_type):
+    existing_columns = {row[1] for row in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()}
+    if column_name not in existing_columns:
+        try:
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
+        except sqlite3.OperationalError as exc:
+            if "duplicate column name" not in str(exc).lower():
+                raise
 
 
 DURATION_LABELS = {
@@ -550,7 +593,7 @@ def validate_analysis_input(symptoms, age, gender, duration):
 
 
 def check_web_rate_limit():
-    client_ip = sanitize_text(request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown", 128)
+    client_ip = get_client_ip()
     now = time.time()
     window = app.config["WEB_RATE_LIMIT_WINDOW_SECONDS"]
     limit = app.config["WEB_RATE_LIMIT_MAX_REQUESTS"]
@@ -564,20 +607,70 @@ def check_web_rate_limit():
     return True
 
 
+def get_client_ip():
+    return sanitize_text(request.headers.get("X-Forwarded-For") or request.remote_addr or "unknown", 128)
+
+
+def check_admin_login_rate_limit():
+    client_ip = get_client_ip()
+    now = time.time()
+    window = app.config["ADMIN_LOGIN_WINDOW_SECONDS"]
+    limit = app.config["ADMIN_LOGIN_MAX_ATTEMPTS"]
+    with RATE_LIMIT_LOCK:
+        timestamps = ADMIN_LOGIN_RATE_LIMIT_STATE.get(client_ip, [])
+        timestamps = [stamp for stamp in timestamps if now - stamp < window]
+        if len(timestamps) >= limit:
+            ADMIN_LOGIN_RATE_LIMIT_STATE[client_ip] = timestamps
+            return False
+        timestamps.append(now)
+        ADMIN_LOGIN_RATE_LIMIT_STATE[client_ip] = timestamps
+    return True
+
+
+def reset_admin_login_rate_limit():
+    client_ip = get_client_ip()
+    with RATE_LIMIT_LOCK:
+        ADMIN_LOGIN_RATE_LIMIT_STATE.pop(client_ip, None)
+
+
+def generate_csrf_token():
+    token = secrets.token_urlsafe(32)
+    session["csrf_token"] = token
+    return token
+
+
+def get_csrf_token():
+    return session.get("csrf_token") or generate_csrf_token()
+
+
+def validate_csrf_token(token):
+    expected = session.get("csrf_token")
+    return bool(expected and token and secrets.compare_digest(expected, token))
+
+
 def get_request_language():
     lang = request.values.get("lang") or request.args.get("lang") or "uz_latn"
     return get_lang(lang)
 
 
 def get_language_switch_links():
-    current_path = request.path
-    return [
+    return build_language_switch_links(request.path)
+
+
+@lru_cache(maxsize=32)
+def build_language_switch_links(current_path):
+    return tuple(
         {"code": code, "label": label, "url": f"{current_path}?lang={code}"}
         for code, label in LANGUAGE_LABELS.items()
-    ]
+    )
 
 
 def get_web_texts(language):
+    return _get_web_texts_cached(get_lang(language))
+
+
+@lru_cache(maxsize=8)
+def _get_web_texts_cached(language):
     language = get_lang(language)
     if language == "ru":
         texts = {
@@ -683,6 +776,8 @@ def get_web_texts(language):
 def get_db_connection():
     conn = sqlite3.connect("symptom_checker.db")
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
     return conn
 
 
@@ -729,6 +824,123 @@ def save_user_language(chat_id, language):
     )
     conn.commit()
     conn.close()
+
+
+def save_telegram_user_profile(chat_id, language, username=None, full_name=None, phone_number=None):
+    conn = get_db_connection()
+    existing = conn.execute(
+        "SELECT username, full_name, phone_number FROM telegram_users WHERE chat_id = ?",
+        (chat_id,),
+    ).fetchone()
+    resolved_username = sanitize_text(username or "", 255) or (existing["username"] if existing else None)
+    resolved_full_name = sanitize_text(full_name or "", 255) or (existing["full_name"] if existing else None)
+    resolved_phone_number = sanitize_text(phone_number or "", 64) or (existing["phone_number"] if existing else None)
+    conn.execute(
+        """INSERT INTO telegram_users (chat_id, language, username, full_name, phone_number, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(chat_id) DO UPDATE SET
+             language=excluded.language,
+             username=COALESCE(excluded.username, telegram_users.username),
+             full_name=COALESCE(excluded.full_name, telegram_users.full_name),
+             phone_number=COALESCE(excluded.phone_number, telegram_users.phone_number),
+             updated_at=excluded.updated_at""",
+        (
+            chat_id,
+            get_lang(language),
+            resolved_username,
+            resolved_full_name,
+            resolved_phone_number,
+            datetime.utcnow().isoformat(timespec="seconds"),
+        ),
+    )
+    conn.commit()
+    conn.close()
+    return {
+        "username": resolved_username,
+        "full_name": resolved_full_name,
+        "phone_number": resolved_phone_number,
+    }
+
+
+def get_telegram_user_profile(chat_id):
+    conn = get_db_connection()
+    row = conn.execute(
+        "SELECT username, full_name, phone_number FROM telegram_users WHERE chat_id = ?",
+        (chat_id,),
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def build_admin_ai_analysis_text(result):
+    summary = sanitize_text(result.get("risk_summary") or "", 1200)
+    possible_causes = [sanitize_text(item or "", 240) for item in result.get("possible_causes", []) if sanitize_text(item or "", 240)]
+    if possible_causes:
+        return sanitize_text(f"{summary} Ehtimoliy izohlar: {'; '.join(possible_causes)}", 2000)
+    return summary
+
+
+def save_telegram_analysis_record(chat_id, username, full_name, phone_number, result):
+    conn = get_db_connection()
+    conn.execute(
+        """INSERT INTO telegram_analyses
+           (chat_id, username, full_name, phone_number, symptoms, ai_diagnosis, risk_level, specialist, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            chat_id,
+            sanitize_text(username or "", 255) or None,
+            sanitize_text(full_name or "", 255) or None,
+            sanitize_text(phone_number or "", 64) or None,
+            result.get("symptoms"),
+            build_admin_ai_analysis_text(result),
+            result.get("risk_level"),
+            result.get("specialist"),
+            datetime.utcnow().isoformat(timespec="seconds"),
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_admin_credentials():
+    admin_username = (os.environ.get("ADMIN_USERNAME") or "admin").strip()
+    admin_password = os.environ.get("ADMIN_PASSWORD")
+    admin_password_hash = os.environ.get("ADMIN_PASSWORD_HASH")
+    return admin_username, admin_password, admin_password_hash
+
+
+def verify_admin_credentials(username, password):
+    admin_username, admin_password, admin_password_hash = get_admin_credentials()
+    if username != admin_username:
+        return False
+    if admin_password_hash:
+        return check_password_hash(admin_password_hash, password)
+    if admin_password:
+        return password == admin_password
+    return False
+
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        if not session.get("is_admin"):
+            return redirect(url_for("admin_login"))
+        return view_func(*args, **kwargs)
+
+    return wrapped_view
+
+
+@app.after_request
+def apply_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.path.startswith("/admin"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
 
 
 def load_telegram_session(chat_id):
@@ -932,13 +1144,35 @@ def extract_api_error(exc, provider, language="uz_latn"):
                 if provider == "gemini":
                     return t(language, "api_gemini_quota")
                 return "OpenAI hisobida quota yetarli emas. Billing yoki limitni tekshiring."
+            if provider == "gemini" and message:
+                lowered_message = message.lower()
+                if "high demand" in lowered_message or "try again later" in lowered_message:
+                    return "Gemini modeli hozir band. Birozdan keyin qayta urinib ko'ring."
             if message and provider == "gemini":
-                return f"{t(language, 'api_gemini_error')} {message}"
+                return t(language, "api_gemini_error")
         except (OSError, ValueError, json.JSONDecodeError):
             pass
     if provider == "gemini":
         return t(language, "api_gemini_error")
     return "OpenAI API bilan ulanishda xatolik bo'ldi."
+
+
+def is_retryable_gemini_error(exc):
+    if isinstance(exc, (urllib.error.URLError, TimeoutError)):
+        return True
+    if isinstance(exc, urllib.error.HTTPError):
+        try:
+            payload = json.loads(exc.read().decode("utf-8"))
+            error = payload.get("error", {})
+            message = (error.get("message") or "").lower()
+            code = error.get("code")
+            if code in {429, 500, 502, 503, 504, "RESOURCE_EXHAUSTED"}:
+                return True
+            if "high demand" in message or "try again later" in message or "temporarily unavailable" in message:
+                return True
+        except (OSError, ValueError, json.JSONDecodeError):
+            return exc.code in {429, 500, 502, 503, 504}
+    return False
 
 
 def build_user_notice(warning, source, language="uz_latn"):
@@ -967,8 +1201,18 @@ def extract_gemini_text(response_payload):
 def call_gemini_analysis(symptoms, age, gender, duration, language="uz_latn"):
     language = get_lang(language)
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    gemini_model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+    gemini_retries = max(1, int(os.environ.get("GEMINI_RETRIES", "3")))
+    fallback_base = None
+
+    def get_fallback_base():
+        nonlocal fallback_base
+        if fallback_base is None:
+            fallback_base = fallback_analysis(symptoms, age, gender, duration, language)
+        return fallback_base
+
     if not api_key or api_key == "your_api_key_here":
-        fallback = fallback_analysis(symptoms, age, gender, duration, language)
+        fallback = dict(get_fallback_base())
         fallback["warning"] = t(language, "fallback_warning_missing_key")
         return fallback
 
@@ -1018,27 +1262,34 @@ def call_gemini_analysis(symptoms, age, gender, duration, language="uz_latn"):
         },
     }
 
-    request_obj = urllib.request.Request(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "x-goog-api-key": api_key,
-        },
-        method="POST",
-    )
-
-    try:
-        with urllib.request.urlopen(request_obj, timeout=app.config["AI_TIMEOUT_SECONDS"]) as response:
-            response_payload = json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError) as exc:
-        fallback = fallback_analysis(symptoms, age, gender, duration, language)
-        fallback["warning"] = t(language, "fallback_warning_api", message=extract_api_error(exc, "gemini", language))
-        return fallback
+    response_payload = None
+    last_exc = None
+    for attempt in range(gemini_retries):
+        request_obj = urllib.request.Request(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request_obj, timeout=app.config["AI_TIMEOUT_SECONDS"]) as response:
+                response_payload = json.loads(response.read().decode("utf-8"))
+            break
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError) as exc:
+            last_exc = exc
+            if attempt < gemini_retries - 1 and is_retryable_gemini_error(exc):
+                time.sleep(0.8 * (attempt + 1))
+                continue
+            fallback = dict(get_fallback_base())
+            fallback["warning"] = t(language, "fallback_warning_api", message=extract_api_error(exc, "gemini", language))
+            return fallback
 
     output_text = extract_gemini_text(response_payload)
     if not output_text:
-        fallback = fallback_analysis(symptoms, age, gender, duration, language)
+        fallback = dict(get_fallback_base())
         fallback["warning"] = t(language, "fallback_empty")
         return fallback
 
@@ -1046,11 +1297,11 @@ def call_gemini_analysis(symptoms, age, gender, duration, language="uz_latn"):
     try:
         ai_result = json.loads(cleaned_output)
     except json.JSONDecodeError:
-        fallback = fallback_analysis(symptoms, age, gender, duration, language)
+        fallback = dict(get_fallback_base())
         fallback["warning"] = t(language, "fallback_bad_json")
         return fallback
 
-    fallback_base = fallback_analysis(symptoms, age, gender, duration, language)
+    fallback_base = get_fallback_base()
     return {
         "risk_level": normalize_risk_level(ai_result.get("risk_level")),
         "specialist": ai_result.get("specialist") or infer_specialist(symptoms, detect_emergency(symptoms)),
@@ -1295,6 +1546,100 @@ def format_telegram_result(result, language):
     )
 
 
+def format_telegram_result_v2(result, language):
+    language = get_lang(language)
+    fallback_advice = {
+        "uz_latn": "Tavsiya topilmadi.",
+        "uz_cyrl": "РўР°РІСЃРёСЏ С‚РѕРїРёР»РјР°РґРё.",
+        "en": "No advice was returned.",
+        "ru": "Р РµРєРѕРјРµРЅРґР°С†РёРё РЅРµ Р±С‹Р»Рё РїРѕР»СѓС‡РµРЅС‹.",
+    }[language]
+    fallback_causes = {
+        "uz_latn": "AI qo'shimcha ehtimollar bermadi.",
+        "uz_cyrl": "AI Т›СћС€РёРјС‡Р° СЌТіС‚РёРјРѕР»Р»Р°СЂ Р±РµСЂРјР°РґРё.",
+        "en": "The AI did not provide additional possibilities.",
+        "ru": "AI РЅРµ РґР°Р» РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹С… РїСЂРµРґРїРѕР»РѕР¶РµРЅРёР№.",
+    }[language]
+    fallback_help = {
+        "uz_latn": "Alomatlar kuchaysa shifokorga murojaat qiling.",
+        "uz_cyrl": "РђР»РѕРјР°С‚Р»Р°СЂ РєСѓС‡Р°Р№СЃР° С€РёС„РѕРєРѕСЂРіР° РјСѓСЂРѕР¶Р°Р°С‚ Т›РёР»РёРЅРі.",
+        "en": "Contact a doctor if symptoms get worse.",
+        "ru": "РћР±СЂР°С‚РёС‚РµСЃСЊ Рє РІСЂР°С‡Сѓ, РµСЃР»Рё СЃРёРјРїС‚РѕРјС‹ СѓСЃРёР»СЏС‚СЃСЏ.",
+    }[language]
+
+    def pick_icon(text, icon_map, default_icon):
+        lowered = (text or "").lower()
+        for keyword, icon in icon_map:
+            if keyword in lowered:
+                return icon
+        return default_icon
+
+    def build_lines(items, icon_map, default_icon, fallback_text):
+        safe_items = items or [fallback_text]
+        return "\n".join(f"{pick_icon(item, icon_map, default_icon)} {html.escape(item)}" for item in safe_items)
+
+    advice_lines = build_lines(
+        result.get("advice", []),
+        [("suv", "💧"), ("dam", "🛌"), ("stress", "🧘"), ("dori", "💊"), ("shifokor", "👨‍⚕️"), ("tez yordam", "🚨")],
+        "✅",
+        fallback_advice,
+    )
+    causes_lines = build_lines(
+        result.get("possible_causes", []),
+        [("stress", "🧠"), ("charchoq", "😴"), ("suvsiz", "💧"), ("uyqu", "🌙"), ("virus", "🦠"), ("infeksi", "🦠")],
+        "🔹",
+        fallback_causes,
+    )
+    help_lines = build_lines(
+        result.get("when_to_seek_help", []),
+        [("darhol", "⛔"), ("tez", "🚨"), ("nafas", "🚨"), ("isitma", "⚠️"), ("og'riq", "⚠️")],
+        "⚠️",
+        fallback_help,
+    )
+
+    emergency_line = f"🚨 {t(language, 'yes')}" if result.get("emergency") else f"✅ {t(language, 'no')}"
+    risk_label = html.escape(result.get("risk_label", "Qiyin baholandi"))
+    specialist = html.escape(result.get("specialist", "Umumiy amaliyot shifokori"))
+    summary = html.escape(result.get("risk_summary", "Qisqa xulosa mavjud emas."))
+    risk_badge = get_risk_badge(result, language)
+
+    return (
+        "<b>🧾 {result_title}</b>\n"
+        "━━━━━━━━━━━━━━━━━━\n\n"
+        "<b>{risk_badge}</b>\n"
+        "📊 <b>{risk_level_title}:</b> {risk_label}\n"
+        "👨‍⚕️ <b>{specialist_title}:</b> {specialist}\n"
+        "🚨 <b>{emergency_title}:</b> {emergency_line}\n\n"
+        "📝 <b>{summary_title}</b>\n"
+        "{summary}\n\n"
+        "✅ <b>{advice_title}</b>\n"
+        "{advice_lines}\n\n"
+        "🔎 <b>{causes_title}</b>\n"
+        "{causes_lines}\n\n"
+        "⚠️ <b>{seek_help_title}</b>\n"
+        "{help_lines}\n\n"
+        "ℹ️ <i>{medical_disclaimer}</i>"
+    ).format(
+        result_title=t(language, "result_title"),
+        risk_badge=risk_badge,
+        risk_level_title=t(language, "risk_level"),
+        specialist_title=t(language, "specialist"),
+        emergency_title=t(language, "emergency"),
+        summary_title=t(language, "summary"),
+        advice_title=t(language, "advice"),
+        causes_title=t(language, "causes"),
+        seek_help_title=t(language, "seek_help"),
+        medical_disclaimer=t(language, "medical_disclaimer"),
+        risk_label=risk_label,
+        specialist=specialist,
+        emergency_line=emergency_line,
+        summary=summary,
+        advice_lines=advice_lines,
+        causes_lines=causes_lines,
+        help_lines=help_lines,
+    )
+
+
 def normalize_gender_input(text):
     normalized = (text or "").strip().lower()
     for gender_key, aliases in GENDER_INPUT_ALIASES.items():
@@ -1391,10 +1736,26 @@ def handle_telegram_callback(callback_query, token):
 
 def handle_telegram_message(message, token):
     chat = message.get("chat") or {}
+    user = message.get("from") or {}
+    contact = message.get("contact") or {}
     chat_id = chat.get("id")
     if not chat_id:
         return
     language = get_user_language(chat_id)
+    username = sanitize_text(user.get("username") or "", 255)
+    full_name = " ".join(part for part in [user.get("first_name"), user.get("last_name")] if part)
+    full_name = sanitize_text(full_name, 255)
+    phone_number = sanitize_text(contact.get("phone_number") or "", 64)
+    saved_profile = save_telegram_user_profile(chat_id, language, username=username, full_name=full_name, phone_number=phone_number)
+    resolved_phone_number = saved_profile["phone_number"] or ""
+
+    if phone_number:
+        send_telegram_message(
+            chat_id,
+            "Telefon raqamingiz saqlandi. Endi simptomlaringizni matn ko'rinishida yuborishingiz mumkin.",
+            token,
+        )
+        return
 
     text = sanitize_text(message.get("text") or "", app.config["MAX_SYMPTOMS_LENGTH"])
     if not text:
@@ -1501,7 +1862,8 @@ def handle_telegram_message(message, token):
         try:
             result = analyze_symptoms(symptoms, age, gender, duration, language)
             save_analysis_record(result)
-            send_telegram_message(chat_id, format_telegram_result(result, language), token, reply_markup=result_actions_keyboard_for_language(language))
+            save_telegram_analysis_record(chat_id, username, full_name, resolved_phone_number, result)
+            send_telegram_message(chat_id, format_telegram_result_v2(result, language), token, reply_markup=result_actions_keyboard_for_language(language))
             if result.get("warning"):
                 send_telegram_message(chat_id, f"{t(language, 'warning_prefix')}{html.escape(result['warning'])}", token)
         except Exception:
@@ -1516,8 +1878,10 @@ def handle_telegram_message(message, token):
                 "possible_causes": fallback_base.get("possible_causes", []),
                 "when_to_seek_help": fallback_base.get("when_to_seek_help", []),
                 "emergency": bool(fallback_base.get("emergency", False)) or detect_emergency(symptoms),
+                "symptoms": symptoms,
             }
-            send_telegram_message(chat_id, format_telegram_result(fallback, language), token, reply_markup=result_actions_keyboard_for_language(language))
+            save_telegram_analysis_record(chat_id, username, full_name, resolved_phone_number, fallback)
+            send_telegram_message(chat_id, format_telegram_result_v2(fallback, language), token, reply_markup=result_actions_keyboard_for_language(language))
             send_telegram_message(
                 chat_id,
                 t(language, "server_error_safe"),
@@ -1568,8 +1932,11 @@ def start_telegram_bot():
     with TELEGRAM_POLL_LOCK:
         if TELEGRAM_POLL_STARTED:
             return True
-        set_telegram_profile(token)
-        set_telegram_commands(token)
+        try:
+            set_telegram_profile(token)
+            set_telegram_commands(token)
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError, RuntimeError) as exc:
+            print(f"[telegram] setup skipped: {exc}")
         TELEGRAM_POLL_THREAD = threading.Thread(
             target=poll_telegram_updates,
             args=(token,),
@@ -1669,6 +2036,91 @@ def history():
         for row in rows
     ]
     return render_template("history.html", history=history_items, lang=language, ui=get_web_texts(language), language_links=get_language_switch_links())
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if session.get("is_admin"):
+        return redirect(url_for("admin_dashboard"))
+
+    error_message = None
+    csrf_token = get_csrf_token()
+    admin_username, admin_password, admin_password_hash = get_admin_credentials()
+    if not admin_password and not admin_password_hash:
+        error_message = "Admin login hali sozlanmagan. .env ichida ADMIN_PASSWORD yoki ADMIN_PASSWORD_HASH kiriting."
+        return render_template("admin_login.html", error_message=error_message, csrf_token=csrf_token, hide_language_switcher=True, hide_admin_link=True)
+    if request.method == "POST":
+        submitted_csrf = request.form.get("csrf_token") or ""
+        if not validate_csrf_token(submitted_csrf):
+            abort(400)
+        if not check_admin_login_rate_limit():
+            error_message = "Urinishlar soni oshib ketdi. Birozdan keyin qayta urinib ko'ring."
+            return render_template("admin_login.html", error_message=error_message, csrf_token=csrf_token, hide_language_switcher=True, hide_admin_link=True)
+        username = sanitize_text(request.form.get("username") or "", 255)
+        password = request.form.get("password") or ""
+        if verify_admin_credentials(username, password):
+            session.clear()
+            session["is_admin"] = True
+            session["admin_username"] = username
+            session.permanent = True
+            generate_csrf_token()
+            reset_admin_login_rate_limit()
+            return redirect(url_for("admin_dashboard"))
+        error_message = "Login yoki parol noto'g'ri."
+
+    return render_template("admin_login.html", error_message=error_message, csrf_token=csrf_token, hide_language_switcher=True, hide_admin_link=True)
+
+
+@app.route("/admin/logout", methods=["POST"])
+@admin_required
+def admin_logout():
+    submitted_csrf = request.form.get("csrf_token") or ""
+    if not validate_csrf_token(submitted_csrf):
+        abort(400)
+    session.clear()
+    return redirect(url_for("index"))
+
+
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    conn = get_db_connection()
+    rows = conn.execute(
+        """SELECT ta.created_at,
+                  COALESCE(ta.username, tu.username) AS username,
+                  COALESCE(ta.full_name, tu.full_name) AS full_name,
+                  COALESCE(ta.phone_number, tu.phone_number) AS phone_number,
+                  ta.symptoms,
+                  ta.ai_diagnosis,
+                  ta.risk_level,
+                  ta.specialist
+           FROM telegram_analyses ta
+           LEFT JOIN telegram_users tu ON tu.chat_id = ta.chat_id
+           ORDER BY ta.id DESC"""
+    ).fetchall()
+    conn.close()
+
+    records = [
+        {
+            "created_at": row["created_at"],
+            "username": row["username"] or "-",
+            "full_name": row["full_name"] or "-",
+            "phone_number": row["phone_number"] or "-",
+            "symptoms": row["symptoms"] or "-",
+            "ai_diagnosis": row["ai_diagnosis"] or "-",
+            "risk_level": row["risk_level"] or "-",
+            "specialist": row["specialist"] or "-",
+        }
+        for row in rows
+    ]
+    return render_template(
+        "admin_dashboard.html",
+        records=records,
+        admin_username=session.get("admin_username", "admin"),
+        csrf_token=get_csrf_token(),
+        hide_language_switcher=True,
+        hide_admin_link=True,
+    )
 
 
 @app.errorhandler(400)
